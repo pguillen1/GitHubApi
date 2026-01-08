@@ -15,7 +15,7 @@ interface GitHubApi {
 		@Query("order") order: String = "desc"
 	): SearchResponseDto
 
-	@GET("/users/{username}/repos")
+	@GET("users/{username}/repos")
 	suspend fun getUserRepos(
 		@Path("username") username: String
 	): List<RepoDto>

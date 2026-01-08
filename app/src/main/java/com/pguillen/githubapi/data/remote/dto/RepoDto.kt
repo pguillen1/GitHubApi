@@ -1,13 +1,16 @@
 package com.pguillen.githubapi.data.remote.dto
 
 import com.pguillen.githubapi.domain.model.RepoDomain
+import com.squareup.moshi.Json
 
 data class RepoDto(
 	val id: Long,
 	val name: String,
-	val full_name: String,
+	@Json(name = "full_name")
+	val fullName: String,
 	val description: String?,
-	val stargazers_count: Int,
+	@Json(name = "stargazers_count")
+	val stargazersCount: Int,
 	val language: String?,
 	val owner: OwnerDto
 )
@@ -16,9 +19,9 @@ fun RepoDto.toDomain(): RepoDomain {
 	return RepoDomain(
 		id = id,
 		name = name,
-		fullName = full_name,
+		fullName = fullName,
 		description = description,
-		stars = stargazers_count,
+		stars = stargazersCount,
 		language = language,
 		ownerName = owner.login,
 		ownerAvatarUrl = owner.avatar_url

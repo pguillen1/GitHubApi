@@ -1,10 +1,12 @@
 package com.pguillen.githubapi.ui.screen.github_list
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pguillen.githubapi.domain.model.toUi
 import com.pguillen.githubapi.domain.usercase.getuserrepos.GetUserRepos
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -20,16 +22,21 @@ class GitHubListViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<GitHubListUiState>(GitHubListUiState.EmptyList)
     val uiState = _uiState.asStateFlow()
 
-    private val _uiEffect = MutableSharedFlow<GitHubListUiEffect>()
+    private val _uiEffect = MutableSharedFlow<GitHubListUiEffect>(
+	    replay = 0,
+	    extraBufferCapacity = 1,
+		onBufferOverflow = BufferOverflow.DROP_OLDEST
+	)
     val uiEffect = _uiEffect.asSharedFlow()
 
-    var currentText = ""
+	private val _currentText = MutableStateFlow("")
+	val currentText = _currentText.asStateFlow()
 
     fun onEvent(event: GitHubListUiEvent) {
         when (event) {
 
             is GitHubListUiEvent.OnTextChange -> {
-                currentText = event.text
+                _currentText.value = event.text
             }
 
             GitHubListUiEvent.OnSearchClick -> {
@@ -39,14 +46,14 @@ class GitHubListViewModel @Inject constructor(
     }
 
     private fun search() {
-        if (currentText.isBlank()) {
+        if (_currentText.value.isBlank()) {
             emitError("Introduce un texto")
             return
         }
         _uiState.value = GitHubListUiState.Loading
         viewModelScope.launch {
             try {
-                val repos = getUserReposUseCase(currentText).map {
+                val repos = getUserReposUseCase(_currentText.value).map {
                     it.toUi()
                 }
                 if (repos.isEmpty()) {
