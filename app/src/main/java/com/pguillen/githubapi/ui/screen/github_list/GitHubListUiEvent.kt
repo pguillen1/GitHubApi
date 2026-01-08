@@ -6,5 +6,10 @@ sealed interface GitHubListUiEvent {
 		val text: String
 	) : GitHubListUiEvent
 
-	object OnSearchClick : GitHubListUiEvent
+	data object OnSearchClick : GitHubListUiEvent
+
+    data class OnRepoClick(
+        val owner: String,
+        val repoName: String
+    ) : GitHubListUiEvent
 }

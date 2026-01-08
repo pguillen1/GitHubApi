@@ -15,63 +15,79 @@ import javax.inject.Inject
 
 @HiltViewModel
 class GitHubListViewModel @Inject constructor(
-	private val getUserReposUseCase: GetUserRepos
+    private val getUserReposUseCase: GetUserRepos
 ) : ViewModel() {
 
-	private val _uiState = MutableStateFlow<GitHubListUiState>(GitHubListUiState.EmptyList)
-	val uiState = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow<GitHubListUiState>(GitHubListUiState.EmptyList)
+    val uiState = _uiState.asStateFlow()
 
-	private val _uiEffect = MutableSharedFlow<GitHubListUiEffect>(
-		replay = 0,
-		extraBufferCapacity = 1,
-		onBufferOverflow = BufferOverflow.DROP_OLDEST
-	)
-	val uiEffect = _uiEffect.asSharedFlow()
+    private val _uiEffect = MutableSharedFlow<GitHubListUiEffect>(
+        replay = 0,
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    val uiEffect = _uiEffect.asSharedFlow()
 
-	private val _currentText = MutableStateFlow("")
-	val currentText = _currentText.asStateFlow()
+    private val _currentText = MutableStateFlow("")
+    val currentText = _currentText.asStateFlow()
 
-	fun onEvent(event: GitHubListUiEvent) {
-		when (event) {
+    fun onEvent(event: GitHubListUiEvent) {
+        when (event) {
 
-			is GitHubListUiEvent.OnTextChange -> {
-				_currentText.value = event.text
-			}
+            is GitHubListUiEvent.OnTextChange -> {
+                _currentText.value = event.text
+            }
 
-			GitHubListUiEvent.OnSearchClick -> {
-				search()
-			}
-		}
-	}
+            GitHubListUiEvent.OnSearchClick -> {
+                search()
+            }
 
-	private fun search() {
-		if (_currentText.value.isBlank()) {
-			emitError("Introduce un texto")
-			return
-		}
-		_uiState.value = GitHubListUiState.Loading
-		viewModelScope.launch {
-			try {
-				val repos = getUserReposUseCase(_currentText.value).map {
-					it.toUi()
-				}
-				if (repos.isEmpty()) {
-					_uiState.value = GitHubListUiState.EmptyList
-				}
-				else {
-					_uiState.value = GitHubListUiState.Success(repos)
-				}
-			}
-			catch (e: Exception) {
-				_uiState.value = GitHubListUiState.Error("Error cargando repos.")
-				emitError("No se ha podido cargar los repos")
-			}
-		}
-	}
+            is GitHubListUiEvent.OnRepoClick -> {
+                navigateToDetail(owner = event.owner, repoName = event.repoName)
+            }
+        }
+    }
 
-	private fun emitError(message: String) {
-		viewModelScope.launch {
-			_uiEffect.emit(GitHubListUiEffect.ShowSnackbar(message))
-		}
-	}
+    private fun search() {
+        if (_currentText.value.isBlank()) {
+            emitError("Introduce un texto")
+            return
+        }
+        _uiState.value = GitHubListUiState.Loading
+        viewModelScope.launch {
+            try {
+                val repos = getUserReposUseCase(_currentText.value).map {
+                    it.toUi()
+                }
+                if (repos.isEmpty()) {
+                    _uiState.value = GitHubListUiState.EmptyList
+                } else {
+                    _uiState.value = GitHubListUiState.Success(repos)
+                }
+            } catch (e: Exception) {
+                _uiState.value = GitHubListUiState.Error("Error cargando repos.")
+                emitError("No se ha podido cargar los repos")
+            }
+        }
+    }
+
+    private fun emitError(message: String) {
+        viewModelScope.launch {
+            _uiEffect.emit(GitHubListUiEffect.ShowSnackbar(message))
+        }
+    }
+
+    private fun navigateToDetail(
+        owner: String,
+        repoName: String
+    ) {
+        viewModelScope.launch {
+            _uiEffect.emit(
+                GitHubListUiEffect.NavigateToRepoDetail(
+                    owner = owner,
+                    repoName = repoName
+                )
+            )
+        }
+    }
 }
