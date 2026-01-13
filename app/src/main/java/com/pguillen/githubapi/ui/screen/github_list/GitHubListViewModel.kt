@@ -4,90 +4,142 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pguillen.githubapi.domain.model.toUi
 import com.pguillen.githubapi.domain.usercase.getuserrepos.GetUserRepos
+import com.pguillen.githubapi.domain.usercase.observeuserrepos.ObserveUserRepos
+import com.pguillen.githubapi.domain.usercase.refreshuserrepos.RefreshUserRepos
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class GitHubListViewModel @Inject constructor(
-    private val getUserReposUseCase: GetUserRepos
+	private val getUserReposUseCase: GetUserRepos,
+	private val observeUserRepos: ObserveUserRepos,
+	private val refreshUserRepos: RefreshUserRepos
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow<GitHubListUiState>(GitHubListUiState.EmptyList)
-    val uiState = _uiState.asStateFlow()
+	private val _uiState = MutableStateFlow<GitHubListUiState>(GitHubListUiState())
+	val uiState = _uiState.asStateFlow()
 
-    private val _uiEffect = MutableSharedFlow<GitHubListUiEffect>(
-        replay = 0,
-        extraBufferCapacity = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST
-    )
-    val uiEffect = _uiEffect.asSharedFlow()
+	private val _uiEffect = MutableSharedFlow<GitHubListUiEffect>(
+		replay = 0,
+		extraBufferCapacity = 1,
+		onBufferOverflow = BufferOverflow.DROP_OLDEST
+	)
+	val uiEffect = _uiEffect.asSharedFlow()
 
-    private val _currentText = MutableStateFlow("")
-    val currentText = _currentText.asStateFlow()
+	private var observeJob: Job? = null
+	private var lastUsername: String? = null
 
-    fun onEvent(event: GitHubListUiEvent) {
-        when (event) {
+	fun onEvent(event: GitHubListUiEvent) {
+		when (event) {
 
-            is GitHubListUiEvent.OnTextChange -> {
-                _currentText.value = event.text
-            }
+			is GitHubListUiEvent.OnTextChange -> {
+				_uiState.update { it.copy(query = event.text) }
+			}
 
-            GitHubListUiEvent.OnSearchClick -> {
-                search()
-            }
+			GitHubListUiEvent.OnSearchClick -> {
+				search()
+			}
 
-            is GitHubListUiEvent.OnRepoClick -> {
-                navigateToDetail(owner = event.owner, repoName = event.repoName)
-            }
-        }
-    }
+			is GitHubListUiEvent.OnRepoClick -> {
+				navigateToDetail(owner = event.owner, repoName = event.repoName)
+			}
 
-    private fun search() {
-        if (_currentText.value.isBlank()) {
-            emitError("Introduce un texto")
-            return
-        }
-        _uiState.value = GitHubListUiState.Loading
-        viewModelScope.launch {
-            try {
-                val repos = getUserReposUseCase(_currentText.value).map {
-                    it.toUi()
-                }
-                if (repos.isEmpty()) {
-                    _uiState.value = GitHubListUiState.EmptyList
-                } else {
-                    _uiState.value = GitHubListUiState.Success(repos)
-                }
-            } catch (e: Exception) {
-                _uiState.value = GitHubListUiState.Error("Error cargando repos.")
-                emitError("No se ha podido cargar los repos")
-            }
-        }
-    }
+			GitHubListUiEvent.OnRetry -> {
+				lastUsername?.let { refresh(it) } ?: emitError("Primero busca un usuario")
+			}
+		}
+	}
 
-    private fun emitError(message: String) {
-        viewModelScope.launch {
-            _uiEffect.emit(GitHubListUiEffect.ShowSnackbar(message))
-        }
-    }
+	private fun search() {
+		if (_uiState.value.query.isBlank()) {
+			emitError("Introduce un usuario")
+			return
+		}
+		lastUsername = _uiState.value.query
+		startObserving(lastUsername!!)
+		refresh(lastUsername!!)
+//		_uiState.value = GitHubListUiState.Loading
+//		viewModelScope.launch {
+//			try {
+//				val repos = getUserReposUseCase(_currentText.value).map {
+//					it.toUi()
+//				}
+//				if (repos.isEmpty()) {
+//					_uiState.value = GitHubListUiState.EmptyList
+//				}
+//				else {
+//					_uiState.value = GitHubListUiState.Success(repos)
+//				}
+//			}
+//			catch (e: Exception) {
+//				_uiState.value = GitHubListUiState.Error("Error cargando repos.")
+//				emitError("No se ha podido cargar los repos")
+//			}
+//		}
+	}
 
-    private fun navigateToDetail(
-        owner: String,
-        repoName: String
-    ) {
-        viewModelScope.launch {
-            _uiEffect.emit(
-                GitHubListUiEffect.NavigateToRepoDetail(
-                    owner = owner,
-                    repoName = repoName
-                )
-            )
-        }
-    }
+	private fun emitError(message: String) {
+		viewModelScope.launch {
+			_uiEffect.emit(GitHubListUiEffect.ShowSnackbar(message))
+		}
+	}
+
+	private fun navigateToDetail(
+		owner: String,
+		repoName: String
+	) {
+		viewModelScope.launch {
+			_uiEffect.emit(
+				GitHubListUiEffect.NavigateToRepoDetail(
+					owner = owner,
+					repoName = repoName
+				)
+			)
+		}
+	}
+
+	private fun startObserving(username: String) {
+
+		observeJob?.cancel()
+
+		observeJob = observeUserRepos(username)
+			.onEach { repos ->
+				_uiState.update {
+					it.copy(
+						error = null,
+						repos = repos.map { repo ->  repo.toUi() })
+				}
+			}
+			.catch {
+				_uiState.update { it.copy(error = "Error leyendo cache.") }
+			}
+			.launchIn(viewModelScope)
+	}
+
+	private fun refresh(username: String) {
+		_uiState.update { it.copy(isLoading = true) }
+		viewModelScope.launch {
+			try {
+				refreshUserRepos(username)
+			}
+			catch (e: Exception) {
+				_uiState.update { it.copy(error = "Error refrescando datos.") }
+			}
+			finally {
+				_uiState.update { it.copy(isLoading = false) }
+			}
+		}
+	}
 }

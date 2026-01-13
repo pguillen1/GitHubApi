@@ -1,5 +1,6 @@
 package com.pguillen.githubapi.di
 
+import com.pguillen.githubapi.data.local.entity.RepoDao
 import com.pguillen.githubapi.data.remote.api.GitHubApi
 import com.pguillen.githubapi.data.remote.repository.GitHubRepositoryImpl
 import com.pguillen.githubapi.domain.repository.GitHubRepository
@@ -55,8 +56,8 @@ object NetworkModule {
 
 	@Provides
 	@Singleton
-	fun provideRepository(api: GitHubApi): GitHubRepository {
-		return GitHubRepositoryImpl(api)
+	fun provideRepository(api: GitHubApi, repoDao: RepoDao): GitHubRepository {
+		return GitHubRepositoryImpl(api, repoDao)
 	}
 
 }

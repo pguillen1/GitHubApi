@@ -1,5 +1,6 @@
 package com.pguillen.githubapi.data.remote.dto
 
+import com.pguillen.githubapi.data.local.entity.RepoEntity
 import com.pguillen.githubapi.domain.model.RepoDomain
 import com.squareup.moshi.Json
 
@@ -24,6 +25,19 @@ fun RepoDto.toDomain(): RepoDomain {
 		stars = stargazersCount,
 		language = language,
 		ownerName = owner.login,
+		ownerAvatarUrl = owner.avatar_url
+	)
+}
+
+fun RepoDto.toEntity(ownerName: String): RepoEntity {
+	return RepoEntity(
+		id = id,
+		name = name,
+		fullName = fullName,
+		description = description,
+		stars = stargazersCount,
+		language = language,
+		ownerName = ownerName,
 		ownerAvatarUrl = owner.avatar_url
 	)
 }

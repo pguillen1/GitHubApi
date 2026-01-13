@@ -17,5 +17,6 @@ fun RepoDomain.toUi() = RepoUi(
 	id = id,
 	name = name,
 	description = description,
-	stars = stars
+	stars = stars,
+	owner = ownerName
 )

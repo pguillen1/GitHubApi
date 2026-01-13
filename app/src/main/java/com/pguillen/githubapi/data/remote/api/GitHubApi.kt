@@ -19,4 +19,10 @@ interface GitHubApi {
 	suspend fun getUserRepos(
 		@Path("username") username: String
 	): List<RepoDto>
+
+	@GET(value = "/repos/{owner}/{repo}")
+	suspend fun getRepoDetail(
+		@Path("owner") owner: String,
+		@Path("repo") repoName: String
+	): RepoDto
 }

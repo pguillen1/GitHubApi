@@ -1,5 +1,6 @@
 package com.pguillen.githubapi.ui.screen.github_list
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,9 +13,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedTextField
@@ -35,12 +38,12 @@ import com.pguillen.githubapi.ui.model.RepoUi
 
 @Composable
 fun GitHubListScreen(
-	viewModel: GitHubListViewModel = hiltViewModel()
+	viewModel: GitHubListViewModel = hiltViewModel(),
+	onNavigateToDetail: (String, String) -> Unit
 ) {
 
 	val state by viewModel.uiState.collectAsState()
 	val snackbarHostState = remember { SnackbarHostState() }
-	val text by viewModel.currentText.collectAsState()
 
 	LaunchedEffect(Unit) {
 		viewModel.uiEffect.collect { effect ->
@@ -49,6 +52,10 @@ fun GitHubListScreen(
 					snackbarHostState.showSnackbar(
 						message = effect.message!!
 					)
+				}
+
+				is GitHubListUiEffect.NavigateToRepoDetail -> {
+					onNavigateToDetail(effect.owner, effect.repoName)
 				}
 			}
 		}
@@ -64,16 +71,38 @@ fun GitHubListScreen(
 				.padding(paddingValues)
 		) {
 			SearchInput(
-				text = text,
+				text = state.query,
 				onTextChange = { viewModel.onEvent(GitHubListUiEvent.OnTextChange(it)) },
-				onSearchClick = { viewModel.onEvent(GitHubListUiEvent.OnSearchClick) }
+				onSearchClick = { viewModel.onEvent(GitHubListUiEvent.OnSearchClick) },
+				onRetryClick = { viewModel.onEvent(GitHubListUiEvent.OnRetry) }
 			)
 
-			when (val s = state) {
-				GitHubListUiState.EmptyList -> EmptyListScreen()
-				GitHubListUiState.Loading -> LoadingScreen()
-				is GitHubListUiState.Error -> ErrorScreen(s.error)
-				is GitHubListUiState.Success -> SuccessScreen(s.data)
+			if (state.isLoading && state.repos.isNotEmpty()) {
+				LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+			}
+
+			when {
+				state.repos.isNotEmpty() -> {
+					SuccessScreen(
+						repos = state.repos,
+						onRepoClick = { owner, repoName ->
+							viewModel.onEvent(
+								GitHubListUiEvent.OnRepoClick(
+									owner,
+									repoName
+								)
+							)
+						}
+					)
+				}
+
+				state.isLoading -> {
+					LoadingScreen()
+				}
+
+				else -> {
+					EmptyListScreen()
+				}
 			}
 		}
 	}
@@ -83,7 +112,8 @@ fun GitHubListScreen(
 fun SearchInput(
 	text: String,
 	onTextChange: (String) -> Unit,
-	onSearchClick: () -> Unit
+	onSearchClick: () -> Unit,
+	onRetryClick: () -> Unit
 ) {
 	Row(
 		modifier = Modifier
@@ -96,7 +126,9 @@ fun SearchInput(
 				.padding(8.dp)
 				.weight(1f),
 			value = text,
-			onValueChange = { onTextChange(it) }
+			onValueChange = { onTextChange(it) },
+			singleLine = true,
+			placeholder = { Text("Introduce un usuario") }
 		)
 		OutlinedIconButton(
 			modifier = Modifier.padding(end = 8.dp),
@@ -104,6 +136,14 @@ fun SearchInput(
 			onClick = { onSearchClick() }
 		) {
 			Icon(imageVector = Icons.Default.Search, contentDescription = "Search button")
+		}
+
+		OutlinedIconButton(
+			modifier = Modifier.padding(end = 8.dp),
+			shape = RoundedCornerShape(4.dp),
+			onClick = { onRetryClick() }
+		) {
+			Icon(imageVector = Icons.Default.Refresh, contentDescription = "Retry button")
 		}
 	}
 }
@@ -120,13 +160,21 @@ fun EmptyListScreen() {
 }
 
 @Composable
-fun SuccessScreen(repos: List<RepoUi>) {
+fun SuccessScreen(
+	repos: List<RepoUi>,
+	onRepoClick: (String, String) -> Unit
+) {
 	LazyColumn(
 		modifier = Modifier
 			.fillMaxSize()
 	) {
 		items(repos) { repo ->
-			RepoItem(repo)
+			RepoItem(
+				repo = repo,
+				onRepoClick = { owner, repoName ->
+					onRepoClick(owner, repoName)
+				}
+			)
 		}
 	}
 }
@@ -154,10 +202,14 @@ fun ErrorScreen(message: String) {
 }
 
 @Composable
-fun RepoItem(repo: RepoUi) {
+fun RepoItem(
+	repo: RepoUi,
+	onRepoClick: (String, String) -> Unit
+) {
 	ListItem(
 		modifier = Modifier
-			.fillMaxWidth(),
+			.fillMaxWidth()
+			.clickable { onRepoClick(repo.owner, repo.name) },
 		headlineContent = { Text(repo.name) }
 	)
 }

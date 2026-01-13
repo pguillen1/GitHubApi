@@ -1,6 +1,7 @@
 package com.pguillen.githubapi.usecases
 
-import com.pguillen.githubapi.createRepoDomain
+import com.pguillen.githubapi.createRepoDomainById
+import com.pguillen.githubapi.domain.usercase.getuserrepos.GetUserRepos
 import com.pguillen.githubapi.domain.usercase.getuserrepos.GetUserReposImpl
 import com.pguillen.githubapi.fakes.FakeRepository
 import kotlinx.coroutines.test.runTest
@@ -13,7 +14,7 @@ import org.junit.Test
 class GetUserReposUseCaseTest() {
 
 	private lateinit var fakeRepository: FakeRepository
-	private lateinit var getUserReposUseCase: GetUserReposImpl
+	private lateinit var getUserReposUseCase: GetUserRepos
 
 	@Before
 	fun setup() {
@@ -32,7 +33,7 @@ class GetUserReposUseCaseTest() {
 	fun returns_repos_when_repository_returns_data() = runTest {
 		val testUser = "Test username"
 		fakeRepository.repos =
-			listOf(createRepoDomain(1))
+			listOf(createRepoDomainById(1))
 		val returnList = getUserReposUseCase(testUser)
 		assertEquals(fakeRepository.repos, returnList)
 	}

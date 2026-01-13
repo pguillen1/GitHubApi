@@ -4,6 +4,7 @@ data class RepoUi(
 	val id: Long,
 	val name: String,
 	val description: String?,
-	val stars: Int
+	val stars: Int,
+	val owner: String
 )
 

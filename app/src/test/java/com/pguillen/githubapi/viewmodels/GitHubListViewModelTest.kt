@@ -1,6 +1,6 @@
 package com.pguillen.githubapi.viewmodels
 
-import com.pguillen.githubapi.createRepoDomain
+import com.pguillen.githubapi.createRepoDomainById
 import com.pguillen.githubapi.domain.model.toUi
 import com.pguillen.githubapi.fakes.FakeGetUserRepos
 import com.pguillen.githubapi.ui.screen.github_list.GitHubListUiEffect
@@ -55,7 +55,7 @@ class GitHubListViewModelTest {
 
 	@Test
 	fun transition_from_loading_to_success_when_repository_returns_data() = runTest {
-		fakeGetUserRepos.repos = listOf(createRepoDomain(1))
+		fakeGetUserRepos.repos = listOf(createRepoDomainById(1))
 		val reposUi = fakeGetUserRepos.repos.map { it.toUi() }
 		viewModel.onEvent(GitHubListUiEvent.OnTextChange("Text"))
 		viewModel.onEvent(GitHubListUiEvent.OnSearchClick)

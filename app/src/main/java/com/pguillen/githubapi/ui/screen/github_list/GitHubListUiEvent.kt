@@ -12,4 +12,6 @@ sealed interface GitHubListUiEvent {
         val owner: String,
         val repoName: String
     ) : GitHubListUiEvent
+
+	data object OnRetry : GitHubListUiEvent
 }
