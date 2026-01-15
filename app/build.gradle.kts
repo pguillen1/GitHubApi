@@ -75,9 +75,12 @@ dependencies {
 	// Room
 	ksp(libs.androidx.room.compiler)
 	implementation(libs.androidx.room.runtime)
-
+	androidTestImplementation(libs.androidx.room.testing)
+	// MockWebServer
+	androidTestImplementation(libs.okhttp.mockwebserver3)
 	testImplementation(libs.junit)
 	testImplementation(libs.kotlinx.coroutines.test)
+	androidTestImplementation(libs.kotlinx.coroutines.test)
 	androidTestImplementation(libs.androidx.junit)
 	androidTestImplementation(libs.androidx.espresso.core)
 	androidTestImplementation(platform(libs.androidx.compose.bom))
@@ -85,4 +88,5 @@ dependencies {
 	debugImplementation(libs.androidx.compose.ui.tooling)
 	debugImplementation(libs.androidx.compose.ui.test.manifest)
     testImplementation(kotlin("test"))
+	androidTestImplementation(kotlin("test"))
 }

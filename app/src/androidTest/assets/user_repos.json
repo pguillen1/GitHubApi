@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "name": "Test name 1",
+    "full_name": "Test full name 1",
+    "description": "Description 1",
+    "stargazers_count": 1,
+    "language": "Español",
+    "owner": {
+      "login": "Owner 1",
+      "avatar_url": "Avatar url 1"
+    }
+  },
+  {
+    "id": 2,
+    "name": "Test name 2",
+    "full_name": "Test full name 2",
+    "description": "Description 2",
+    "stargazers_count": 2,
+    "language": "Español",
+    "owner": {
+      "login": "Owner 2",
+      "avatar_url": "Avatar url 2"
+    }
+  }
+]
