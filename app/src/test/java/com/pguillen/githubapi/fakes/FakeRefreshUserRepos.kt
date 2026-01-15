@@ -4,7 +4,7 @@ import com.pguillen.githubapi.domain.usercase.refreshuserrepos.RefreshUserRepos
 
 class FakeRefreshUserRepos: RefreshUserRepos {
 
-    val shouldThrowError = false
+    var shouldThrowError = false
     val calls = mutableListOf<String>()
 
     override suspend fun invoke(username: String) {

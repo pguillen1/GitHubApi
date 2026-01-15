@@ -3,7 +3,6 @@ package com.pguillen.githubapi.ui.screen.github_list
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pguillen.githubapi.domain.model.toUi
-import com.pguillen.githubapi.domain.usercase.getuserrepos.GetUserRepos
 import com.pguillen.githubapi.domain.usercase.observeuserrepos.ObserveUserRepos
 import com.pguillen.githubapi.domain.usercase.refreshuserrepos.RefreshUserRepos
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,19 +15,17 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class GitHubListViewModel @Inject constructor(
-	private val getUserReposUseCase: GetUserRepos,
 	private val observeUserRepos: ObserveUserRepos,
 	private val refreshUserRepos: RefreshUserRepos
 ) : ViewModel() {
 
-	private val _uiState = MutableStateFlow<GitHubListUiState>(GitHubListUiState())
+	private val _uiState = MutableStateFlow(GitHubListUiState())
 	val uiState = _uiState.asStateFlow()
 
 	private val _uiEffect = MutableSharedFlow<GitHubListUiEffect>(
@@ -70,24 +67,6 @@ class GitHubListViewModel @Inject constructor(
 		lastUsername = _uiState.value.query
 		startObserving(lastUsername!!)
 		refresh(lastUsername!!)
-//		_uiState.value = GitHubListUiState.Loading
-//		viewModelScope.launch {
-//			try {
-//				val repos = getUserReposUseCase(_currentText.value).map {
-//					it.toUi()
-//				}
-//				if (repos.isEmpty()) {
-//					_uiState.value = GitHubListUiState.EmptyList
-//				}
-//				else {
-//					_uiState.value = GitHubListUiState.Success(repos)
-//				}
-//			}
-//			catch (e: Exception) {
-//				_uiState.value = GitHubListUiState.Error("Error cargando repos.")
-//				emitError("No se ha podido cargar los repos")
-//			}
-//		}
 	}
 
 	private fun emitError(message: String) {
@@ -119,7 +98,7 @@ class GitHubListViewModel @Inject constructor(
 				_uiState.update {
 					it.copy(
 						error = null,
-						repos = repos.map { repo ->  repo.toUi() })
+						repos = repos.map { repo -> repo.toUi() })
 				}
 			}
 			.catch {
